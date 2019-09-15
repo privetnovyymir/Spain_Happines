@@ -382,3 +382,368 @@ print(happiness_vls_df[['G.12_intervals', 'G.13_intervals']])
 print(happiness_vls_df.groupby(by=['G.6', 'G.13_intervals', 'G.12_intervals'])['G.12_intervals'].count())
 print(happiness_vls_df['G.12_intervals'].sort_values(ascending=True).unique())
 print(happiness_vls_df['G.13_intervals'].sort_values(ascending=True).unique())
+
+''' pre-processing and preparing data for EDA '''
+print(' -- VARIABLES SOCIODEMOGRAFICAS BASICAS --')
+print('Dataframe:\n', happiness_vsb_df, '\nType:', type(happiness_vsb_df), '\nInfo:', happiness_vsb_df.info(),
+      '\nStats\n:', happiness_vsb_df.describe(), '\nColumns:', happiness_vsb_df.columns, '\nShape:',
+      happiness_vsb_df.shape, '\nDtypes:', happiness_vsb_df.dtypes)
+print(happiness_vsb_df['A.4_valor'].sort_values(ascending=True).unique())
+# drop rows with age = 'NA' values:
+happiness_vsb_df = happiness_vsb_df[happiness_vsb_df['A.4_valor'] != 'NA']
+happiness_vsb_df = happiness_vsb_df.dropna()
+print(happiness_vsb_df['A.4_valor'].sort_values(ascending=True).unique())
+print(happiness_vsb_df['A.1'].sort_values(ascending=True).unique())
+print(happiness_vsb_df['A.9.1'].sort_values(ascending=True).unique())
+print(happiness_vsb_df['A.9.2'].sort_values(ascending=True).unique())
+
+# data munging :: encode nominal features with 'one-hot-encoding':
+from sklearn.preprocessing import OneHotEncoder
+onehot = OneHotEncoder(dtype=np.int, sparse=True)
+nominals = pd.DataFrame(
+    onehot.fit_transform(happiness_vsb_df[['A.9.1']]).toarray(),
+    columns=['Española', 'Española y otra']
+)
+happiness_vsb_df['A.9.1_esp'], happiness_vsb_df['A.9.1_esp_other'] = nominals['Española'].astype(int), \
+                                                                     nominals['Española y otra'].astype(int)
+happiness_vsb_df = happiness_vsb_df.dropna()
+
+# resulting dataframe:
+print('Dataframe:\n', happiness_vsb_df, '\nType:', type(happiness_vsb_df), '\nInfo:', happiness_vsb_df.info(),
+      '\nStats\n:', happiness_vsb_df.describe(), '\nColumns:', happiness_vsb_df.columns, '\nShape:',
+      happiness_vsb_df.shape, '\nDtypes:', happiness_vsb_df.dtypes)
+print(happiness_vsb_df['A.4_valor'].sort_values(ascending=True).unique())
+
+print(' -- VALORACION DE LA SITUACION SOCIOECONOMICA PERSONAL --')
+print('Dataframe:\n', happiness_sep_df, '\nType:', happiness_sep_df, '\nInfo:', happiness_sep_df.info(),
+      '\nStats\n:', happiness_sep_df.describe(), '\nColumns:', happiness_sep_df.columns, '\nShape:',
+      happiness_sep_df.shape, '\nDtypes:', happiness_sep_df.dtypes)
+
+# drop nas and N.C. and N.S.:
+happiness_sep_df = happiness_sep_df[happiness_sep_df['B.2.1'] != 'N.C.']
+happiness_sep_df = happiness_sep_df[happiness_sep_df['B.2.1'] != 'N.S.']
+
+happiness_sep_df = happiness_sep_df[happiness_sep_df['B.2.2'] != 'N.C.']
+happiness_sep_df = happiness_sep_df[happiness_sep_df['B.2.2'] != 'N.S.']
+happiness_sep_df = happiness_sep_df.dropna()
+
+print(happiness_sep_df['B.2.1'].sort_values(ascending=True).unique())
+print(happiness_sep_df['B.2.2'].sort_values(ascending=True).unique())
+
+# # data munging :: encode ordinal features with category_encoder.OrdinalEncoder):
+import category_encoders as ce
+ordinals = pd.DataFrame({
+    'situacion_actual': ['Muy Buena', 'Buena', 'Regular', 'Mala', 'Muy mala'],
+    'valor': [2, 0, 1, 3, 4]
+})
+XB21 = ordinals.drop('valor', axis=1)
+yB21 = ordinals.drop('situacion_actual', axis=1)
+ce_ordB21 = ce.OrdinalEncoder(cols=['situacion_actual'])
+ce_ordB21 = ce_ordB21.fit_transform(XB21, yB21['valor'])
+print(ce_ordB21)
+
+ceX21 = ce.OrdinalEncoder(happiness_sep_df['B.2.1'])
+ceX21 = ceX21.fit_transform(happiness_sep_df['B.2.1'], yB21['valor'])
+happiness_sep_df['B.2.1_valor'] = ceX21 # seems bigger numbers for worse qualitative data ... ?
+
+ceX22, yB22 = ce.OrdinalEncoder(happiness_sep_df['B.2.2']), yB21
+ceX22 = ceX22.fit_transform(happiness_sep_df['B.2.2'], yB21['valor'])
+happiness_sep_df['B.2.2_valor'] = ceX22 # maintain same values (as it has to be)
+print(happiness_sep_df)
+
+# resulting dataframe:
+print('Dataframe:\n', happiness_sep_df, '\nType:', happiness_sep_df, '\nInfo:', happiness_sep_df.info(),
+      '\nStats\n:', happiness_sep_df.describe(), '\nColumns:', happiness_sep_df.columns, '\nShape:',
+      happiness_sep_df.shape, '\nDtypes:', happiness_sep_df.dtypes)
+print(happiness_sep_df['B.2.1_valor'].sort_values(ascending=True).unique())
+print(happiness_sep_df['B.2.2_valor'].sort_values(ascending=True).unique())
+
+print('-- VARIABLES POLITICAS --')
+# resulting dataframe:
+print('Dataframe:\n', happiness_vp_df, '\nType:', type(happiness_vp_df), '\nInfo:', happiness_vp_df.info(),
+      '\nStats\n:', happiness_vp_df.describe(), '\nColumns:', happiness_vp_df.columns, '\nShape:',
+      happiness_vp_df.shape, '\nDtypes:', happiness_vp_df.dtypes)
+
+print('-- ACTTUDES PERSONALES --')
+print('Dataframe:\n', happiness_ap_df, '\nType:', type(happiness_ap_df), '\nInfo:', happiness_ap_df.info(),
+      '\nStats\n:', happiness_ap_df.describe(), '\nColumns:', happiness_ap_df.columns, '\nShape:',
+      happiness_ap_df.shape, '\nDtypes:', happiness_ap_df.dtypes)
+print(happiness_ap_df['D.2'].sort_values(ascending=True).unique())
+print(happiness_ap_df['D.3'].sort_values(ascending=True).unique())
+
+# data munging :: encode nominal features with 'one-hot-encoding':
+from sklearn.preprocessing import OneHotEncoder
+onehot = OneHotEncoder(dtype=np.int, sparse=True)
+nominals_D2 = pd.DataFrame(
+    onehot.fit_transform(happiness_ap_df[['D.2']]).toarray(),
+    columns=['Ateo/a', 'Católico/a', 'Creyente de otra religión', 'N.C.', 'No creyente']
+)
+nominals_D3 = pd.DataFrame(
+    onehot.fit_transform(happiness_ap_df[['D.3']]).toarray(),
+    columns=['Alguna vez al mes', 'Casi nunca', 'Casi todos los domingos y festivos', 'N.C.', 'N.P.',
+             'Varias veces a la semana', 'Varias veces al año']
+)
+happiness_ap_df['D.2_ateo'], happiness_ap_df['D.2_catolico'], happiness_ap_df['D.2_otraRel'], \
+happiness_ap_df['D.2_nc'], \
+happiness_ap_df['D.2_agnostico'] = nominals_D2['Ateo/a'].astype(int), nominals_D2['Católico/a'].astype(int), \
+                                   nominals_D2['Creyente de otra religión'].astype(int), \
+                                   nominals_D2['N.C.'].astype(int), \
+                                   nominals_D2['No creyente'].astype(int)
+
+happiness_ap_df['D.3_alguna'], happiness_ap_df['D.3_casiNunca'], happiness_ap_df['D.3_festivos'], \
+happiness_ap_df['D.3_nc'], happiness_ap_df['D.3_np'], happiness_ap_df['D.3_variasEnSemana'], \
+happiness_ap_df['D.3_variasEnAño'] = nominals_D3['Alguna vez al mes'].astype(int), \
+                                     nominals_D3['Casi nunca'].astype(int), \
+                                     nominals_D3['Casi todos los domingos y festivos'].astype(int), \
+                                     nominals_D3['N.C.'].astype(int), \
+                                     nominals_D3['N.P.'].astype(int), \
+                                     nominals_D3['Varias veces a la semana'].astype(int), \
+                                     nominals_D3['Varias veces al año'].astype(int)
+
+# resulting dataframe:
+print('Dataframe:\n', happiness_ap_df, '\nType:', type(happiness_ap_df), '\nInfo:', happiness_ap_df.info(),
+      '\nStats\n:', happiness_ap_df.describe(), '\nColumns:', happiness_ap_df.columns, '\nShape:',
+      happiness_ap_df.shape, '\nDtypes:', happiness_ap_df.dtypes)
+
+print('-- NIVEL DE ESTUDIOS DE LA PERSONA ENTREVISTADA --')
+print(happiness_ne_df, '\nStats', happiness_ne_df.describe(),
+      '\nInfo:', happiness_ne_df.info(), '\nDtypes', happiness_ne_df.dtypes)
+
+# drop NA, N.C. and N.C in this dataset:
+happiness_ne_df = happiness_ne_df.dropna()
+happiness_ne_df = happiness_ne_df[happiness_ne_df['E.2'] != 'N.C.'] # no contesta
+happiness_ne_df = happiness_ne_df[happiness_ne_df['E.2'] != 'N.P.'] # no procede
+happiness_ne_df = happiness_ne_df[happiness_ne_df['E.2'] != 'N.S.'] # no sabe
+
+# data munging :: encode ordinal features with category_encoder.OrdinalEncoder):
+print(happiness_ne_df['E.2'].sort_values(ascending=True).unique()) # niveles desagragados
+print(happiness_ne_df['E.2_2'].sort_values(ascending=True).unique()) # niveles agregados
+# subgrupos ordenados por orden de importancia:
+type_ne_subgrupo0 = happiness_ne_df['E.2'].sort_values(ascending=True).unique()[4] # el mas alto :: doctorado
+type_ne_subgrupo1 = happiness_ne_df['E.2'].sort_values(ascending=True).unique()[12] # siguiente :: master
+type_ne_subgrupo2 = happiness_ne_df['E.2'].sort_values(ascending=True).unique()[0] # siguiente :: arq/ing superior
+type_ne_subgrupo3 = happiness_ne_df['E.2'].sort_values(ascending=True).unique()[11] # siguiente :: licenciado
+type_ne_subgrupo4 = happiness_ne_df['E.2'].sort_values(ascending=True).unique()[1] # siguiente :: arq/ing tecnico
+type_ne_subgrupo5 = happiness_ne_df['E.2'].sort_values(ascending=True).unique()[7] # siguiente :: estudios de grado
+type_ne_subgrupo6 = happiness_ne_df['E.2'].sort_values(ascending=True).unique()[3] # siguiente :: diplomado
+type_ne_subgrupo7 = happiness_ne_df['E.2'].sort_values(ascending=True).unique()[15] # siguiente :: posgrado
+type_ne_subgrupo8 = happiness_ne_df['E.2'].sort_values(ascending=True).unique()[9] # siguiente :: FP superior
+type_ne_subgrupo9 = happiness_ne_df['E.2'].sort_values(ascending=True).unique()[8] # siguiente :: FP medio
+type_ne_subgrupo10 = happiness_ne_df['E.2'].sort_values(ascending=True).unique()[10] # siguiente :: FP inicial
+type_ne_subgrupo11 = happiness_ne_df['E.2'].sort_values(ascending=True).unique()[2] # siguiente :: bachillerato
+type_ne_subgrupo12 = happiness_ne_df['E.2'].sort_values(ascending=True).unique()[6] # siguiente :: secundaria
+type_ne_subgrupo13 = happiness_ne_df['E.2'].sort_values(ascending=True).unique()[5] # siguiente :: primaria
+type_ne_subgrupo14 = happiness_ne_df['E.2'].sort_values(ascending=True).unique()[13] # siguiente :: < 5yr escolar
+type_ne_subgrupo15 = happiness_ne_df['E.2'].sort_values(ascending=True).unique()[14] # siguiente :: < 5yr escolar
+
+import category_encoders as ce
+ordinals_2 = pd.DataFrame({
+    'subgrupo': [type_ne_subgrupo0, type_ne_subgrupo1, type_ne_subgrupo2, type_ne_subgrupo3, type_ne_subgrupo4,
+                 type_ne_subgrupo5, type_ne_subgrupo6, type_ne_subgrupo7, type_ne_subgrupo8, type_ne_subgrupo9,
+                 type_ne_subgrupo10, type_ne_subgrupo11, type_ne_subgrupo12, type_ne_subgrupo13, type_ne_subgrupo14,
+                 type_ne_subgrupo15],
+    'valor': list(np.arange(16))
+})
+XE2 = ordinals_2.drop('valor', axis=1)
+yE2 = ordinals_2.drop('subgrupo', axis=1)
+ce_ord = ce.OrdinalEncoder(cols=['subgrupo'])
+ce_ord = ce_ord.fit_transform(XE2, yE2['valor'])
+
+ce_ordE2 = ce.OrdinalEncoder(happiness_ne_df['E.2'])
+ce_ordE2 = ce_ordE2.fit_transform(happiness_ne_df['E.2'], yE2['valor'])
+happiness_ne_df['E.2_valor'] = ce_ordE2
+
+ordinals_22 = pd.DataFrame({
+    'subgrupo': ['Sin estudios', 'Otros', 'Primaria y secundaria elemental', 'Secundaria superior',
+                 'F.P.', 'Universitarios'],
+    'valor': list(np.arange(6))
+})
+XE22 = ordinals_22.drop('valor', axis=1)
+yE22 = ordinals_22.drop('subgrupo', axis=1)
+ce_ord22 = ce.OrdinalEncoder(cols=['subgrupo'])
+ce_ord22 = ce_ord22.fit_transform(XE22, yE22['valor'])
+
+ce_ordE22 = ce.OrdinalEncoder(happiness_ne_df['E.2_2'])
+ce_ordE22 = ce_ordE22.fit_transform(happiness_ne_df['E.2_2'], yE22['valor'])
+happiness_ne_df['E.2_2_valor'] = ce_ordE22
+print(happiness_ne_df)
+
+print('-- SITUACION CIVIL Y DE CONVIVENCIA --')
+print(happiness_sc_df, '\nStats', happiness_sc_df.describe(),
+      '\nInfo:', happiness_sc_df.info(), '\nDtypes', happiness_sc_df.dtypes)
+
+# remove NAs, strange values:
+happiness_sc_df = happiness_sc_df.dropna()
+happiness_sc_df = happiness_sc_df[happiness_sc_df['F.2'] != '-99.0']
+happiness_sc_df = happiness_sc_df[happiness_sc_df['F.2'] != '']
+happiness_sc_df = \
+    happiness_sc_df[happiness_sc_df['F.3'] != '(NO LEER) La persona entrevistada y otra casi a partes iguales']
+happiness_sc_df = happiness_sc_df[happiness_sc_df['F.3'] != '-99.0']
+
+print(happiness_sc_df['F.1'].sort_values(ascending=True).unique())
+print(happiness_sc_df['F.2'].sort_values(ascending=True).unique())
+print(happiness_sc_df['F.3'].sort_values(ascending=True).unique())
+
+# data munging :: encode nominal features with 'one-hot-encoding':
+from sklearn.preprocessing import OneHotEncoder
+onehot = OneHotEncoder(dtype=np.int, sparse=True)
+nominals_F1 = pd.DataFrame(
+    onehot.fit_transform(happiness_sc_df[['F.1']]).toarray(),
+    columns=['Casado/a', 'Divorciado/a', 'N.C.', 'Separado/a', 'Soltero/a', 'Viudo/a']
+)
+nominals_F2 = pd.DataFrame(
+    onehot.fit_transform(happiness_sc_df[['F.2']]).toarray(),
+    columns=['N.C.', 'N.P.', 'No tiene pareja', 'Tiene pareja pero no comparten la misma vivienda',
+             'Tiene pareja y comparten la misma vivienda']
+)
+nominals_F3 = pd.DataFrame(
+    onehot.fit_transform(happiness_sc_df[['F.3']]).toarray(),
+    columns=['La persona entrevistada', 'N.C.', 'Otra persona']
+)
+happiness_sc_df['F.1_casado'], happiness_sc_df['F.1_divorciado'], happiness_sc_df['F.1_nc'], \
+happiness_sc_df['F.1_separado'], happiness_sc_df['F.1_soltero'], \
+happiness_sc_df['F.1_viudo'] = nominals_F1['Casado/a'].astype(int), nominals_F1['Divorciado/a'].astype(int), \
+                               nominals_F1['N.C.'].astype(int), nominals_F1['Separado/a'].astype(int), \
+                               nominals_F1['Soltero/a'].astype(int), nominals_F1['Viudo/a'].astype(int)
+
+happiness_sc_df['F.2_nc'], happiness_sc_df['F.2_np'], happiness_sc_df['F.2_sinPareja'], \
+happiness_sc_df['F.2_parejaNoVivienda'], \
+happiness_sc_df['F.2_parejaSiVivienda'] = nominals_F2['N.C.'].astype(int), nominals_F2['N.P.'].astype(int), \
+                                          nominals_F2['No tiene pareja'].astype(int), \
+                                          nominals_F2['Tiene pareja pero no comparten la misma vivienda'].astype(int), \
+                                          nominals_F2['Tiene pareja y comparten la misma vivienda'].astype(int)
+
+happiness_sc_df['F.3_entrevistado'], happiness_sc_df['F.3_nc'], \
+happiness_sc_df['otraPersona'] = nominals_F3['La persona entrevistada'].astype(int), \
+                                 nominals_F3['N.C.'].astype(int), nominals_F3['Otra persona'].astype(int)
+# removing NAs and nan values:
+happiness_sc_df = happiness_sc_df.dropna()
+print(happiness_sc_df)
+
+print('-- VARIABLES LABORALES Y SOCIOECONOMICAS --')
+print(happiness_vls_df, '\nStats', happiness_vls_df.describe(),
+      '\nInfo:', happiness_vls_df.info(), '\nDtypes', happiness_vls_df.dtypes)
+print(happiness_vls_df['G.1'].sort_values(ascending=True).unique())
+print(happiness_vls_df['G.2'].sort_values(ascending=True).unique())
+print(happiness_vls_df['G.3'].sort_values(ascending=True).unique())
+print(happiness_vls_df['G.4'].sort_values(ascending=True).unique())
+print(happiness_vls_df['G.6'].sort_values(ascending=True).unique())
+print(happiness_vls_df['G.12'].sort_values(ascending=True).unique())
+print(happiness_vls_df['G.13'].sort_values(ascending=True).unique())
+
+# data munging :: encode nominal features with 'one-hot-encoding':
+from sklearn.preprocessing import OneHotEncoder
+onehot = OneHotEncoder(dtype=np.int, sparse=True)
+nominals_G1 = pd.DataFrame(
+    onehot.fit_transform(happiness_vls_df[['G.1']]).toarray(),
+    columns=['Estudiante', 'Jubilado/a o pensionista (anteriormente ha trabajado)', 'N.C.', 'Otra situación',
+             'Parado/a y busca su primer empleo', 'Parado/a y ha trabajado antes',
+             'Pensionista (anteriormente no ha trabajado)', 'Trabaja', 'Trabajo doméstico no remunerado']
+)
+# data munging :: encode ordinal features with category_encoder.OrdinalEncoder
+# (as Ordinal => eliminates NCs may be a good approach):
+import category_encoders as ce
+ordinals_G2 = pd.DataFrame({
+    'prob_cualitativa': ['Muy probable', 'Bastante probable', 'Poco probable', 'Nada probable', 'N.P.', 'N.S.', 'N.C.'],
+    'valor': list(np.arange(7))
+})
+XG2 = ordinals_G2.drop('valor', axis=1)
+yG2 = ordinals_G2.drop('prob_cualitativa', axis=1)
+ce_ordXG2 = ce.OrdinalEncoder(cols=['prob_cualitativa']) # ce_ordX (X as first test)
+ce_ordXG2 = ce_ordXG2.fit_transform(XG2, yG2['valor'])
+
+ce_ordG2 = ce.OrdinalEncoder(happiness_vls_df['G.2'])
+ce_ordG2 = ce_ordG2.fit_transform(happiness_vls_df['G.2'], yG2['valor'])
+happiness_vls_df['G.2_valor'] = ce_ordG2
+# data munging :: encode ordinal features with category_encoder.OrdinalEncoder (as Ordinal => eliminates NCs, ...):
+ordinals_G3 = pd.DataFrame({
+    'prob_cualitativa': ['Muy probable', 'Bastante probable', 'Poco probable', 'Nada probable', 'N.P.', 'N.S.', 'N.C.'],
+    'valor': list(np.arange(7))
+})
+XG3 = ordinals_G2.drop('valor', axis=1)
+yG3 = ordinals_G2.drop('prob_cualitativa', axis=1)
+ce_ordXG3 = ce.OrdinalEncoder(cols=['prob_cualitativa']) # ce_ordX (X as first test)
+ce_ordXG3 = ce_ordXG3.fit_transform(XG2, yG2['valor'])
+
+ce_ordG3 = ce.OrdinalEncoder(happiness_vls_df['G.3'])
+ce_ordG3 = ce_ordG3.fit_transform(happiness_vls_df['G.3'], yG2['valor'])
+happiness_vls_df['G.3_valor'] = ce_ordG3
+print(happiness_vls_df)
+
+# data cleansing :: eliminate and first-format missing values, nas, etc ...:
+happiness_vls_df = happiness_vls_df[happiness_vls_df['G.4'] != '']
+print(happiness_vls_df)
+
+print(happiness_vls_df['G.4'].sort_values(ascending=True).unique())
+print(happiness_vls_df['G.6'].sort_values(ascending=True).unique())
+# data munging :: encode nominal features with 'one-hot-encoding':
+from sklearn.preprocessing import OneHotEncoder
+onehot = OneHotEncoder(dtype=np.int, sparse=True)
+nominals_G4 = pd.DataFrame(
+    onehot.fit_transform(happiness_vls_df[['G.4']]).toarray(),
+    columns=['Asalariado/a eventual o interino/a (a sueldo, comisión, jornal, etc. con carácter temporal o interino)',
+             'Asalariado/a fijo/a (a sueldo, comisión, jornal, etc. con carácter fijo)',
+             'Ayuda familiar (sin remuneración reglamentada en la empresa o negocio de un familiar)',
+             'Empresario/a o profesional con asalariados/as', 'Miembro de una cooperativa',
+             'N.C.', 'N.P.', 'Otra situación', 'Profesional o trabajador/a autónomo/a (sin asalariados/as)'] # len = 9
+)
+nominals_G6 = pd.DataFrame(
+    onehot.fit_transform(happiness_vls_df[['G.6']]).toarray(),
+    columns=['Agricultores/as', 'Directores/as y profesionales', 'Empleados/as de oficinas y servicios', 'Estudiantes',
+             'Jubilados/as y pensionistas', 'No clasificables', 'Obreros/as cualificados/as',
+             'Obreros/as no cualificados/as', 'Parados/as', 'Pequeños/as empresarios/as',
+             'Trabajo doméstico no remunerado', 'Técnicos/as y cuadros medios'] # len = 12
+)
+
+happiness_vls_df['G.4_temporal'], happiness_vls_df['G.4_fijo'], \
+happiness_vls_df['G.4_ayudaFamiliar'], \
+happiness_vls_df['G.4_empresario'],  happiness_vls_df['G.4_cooperativa'], \
+happiness_vls_df['G.4_nc'], happiness_vls_df['G.4_np'], \
+happiness_vls_df['G.4_otraSituacion'], happiness_vls_df['G.4_autonomo'] = \
+    nominals_G4['Asalariado/a eventual o interino/a (a sueldo, comisión, jornal, etc. con carácter temporal o interino)'], \
+    nominals_G4['Asalariado/a fijo/a (a sueldo, comisión, jornal, etc. con carácter fijo)'], \
+    nominals_G4['Ayuda familiar (sin remuneración reglamentada en la empresa o negocio de un familiar)'], \
+    nominals_G4['Empresario/a o profesional con asalariados/as'], nominals_G4['Miembro de una cooperativa'], \
+    nominals_G4['N.C.'], nominals_G4['N.P.'], \
+    nominals_G4['Otra situación'], nominals_G4['Profesional o trabajador/a autónomo/a (sin asalariados/as)']
+
+happiness_vls_df['G.6_agricultores'], happiness_vls_df['G.6_directores'], \
+happiness_vls_df['G.6_empleadosOficinas'], \
+happiness_vls_df['G.6_estudiantes'], happiness_vls_df['G.6_jubilados'], \
+happiness_vls_df['G.6_noClasificables'], happiness_vls_df['G.6_obrerosCualificados'], \
+happiness_vls_df['G.6_obrerosNoCualificados'], happiness_vls_df['G.6_parados'], \
+happiness_vls_df['G.6_pymes'], happiness_vls_df['G.6_domesticoNoRemunerado'], \
+happiness_vls_df['G.6_tecnicos'] = nominals_G6['Agricultores/as'], nominals_G6['Directores/as y profesionales'], \
+                                   nominals_G6['Empleados/as de oficinas y servicios'], nominals_G6['Estudiantes'], \
+                                   nominals_G6['Jubilados/as y pensionistas'], nominals_G6['No clasificables'], \
+                                   nominals_G6['Obreros/as cualificados/as'], \
+                                   nominals_G6['Obreros/as no cualificados/as'], \
+                                   nominals_G6['Parados/as'], nominals_G6['Pequeños/as empresarios/as'], \
+                                   nominals_G6['Trabajo doméstico no remunerado'], \
+                                   nominals_G6['Técnicos/as y cuadros medios']
+
+happiness_vls_df = happiness_vls_df.dropna()
+print(happiness_vls_df)
+
+print('-------------------------------------------------------------------------')
+print('-- JOIN ALL TABLES INTO ONE --')
+# join all tables, including categorical features (nominal and ordinal):
+happiness_catnum_df = pd.merge(left=happiness_vsb_df, right=happiness_sep_df, on='N_Entrevista', how='inner')
+happiness_catnum_df = pd.merge(left=happiness_catnum_df, right=happiness_vp_df, on='N_Entrevista', how='inner')
+happiness_catnum_df = pd.merge(left=happiness_catnum_df, right=happiness_ap_df, on='N_Entrevista', how='inner')
+happiness_catnum_df = pd.merge(left=happiness_catnum_df, right=happiness_ne_df, on='N_Entrevista', how='inner')
+happiness_catnum_df = pd.merge(left=happiness_catnum_df, right=happiness_sc_df, on='N_Entrevista', how='inner')
+happiness_catnum_df = pd.merge(left=happiness_catnum_df, right=happiness_vls_df, on='N_Entrevista', how='inner')
+
+print(happiness_catnum_df, '\nStats', happiness_catnum_df.describe(),
+      '\nInfo:', happiness_catnum_df.info(), '\nDtypes', happiness_catnum_df.dtypes)
+# drop non-numeric columns:
+happiness_num_df = happiness_catnum_df.select_dtypes([np.number])
+print(happiness_num_df, '\nStats', happiness_num_df.describe(),
+      '\nInfo:', happiness_num_df.info(), '\nDtypes', happiness_num_df.dtypes)
+
+# exporting the datasets to the corresponding folder:
+happiness_catnum_df.to_csv('C:/Users/Ignacio Ojeda/Documents/_NeverBackUp/EMPRESAS/BBVA/happiness_catnum_df.csv')
+happiness_num_df.to_csv('C:/Users/Ignacio Ojeda/Documents/_NeverBackUp/EMPRESAS/BBVA/happiness_num_df.csv')
+
+print('-------------------------------------------------------------------------')
